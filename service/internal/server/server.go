@@ -38,6 +38,11 @@ func (s *Server) SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /{$}", s.handleIndex)
 
 	mux.HandleFunc("POST /api/game/new", s.handleNewGame)
+	// Explicit GET on /api/game/new so Go 1.22 mux returns 405 (not 404 via the {id} wildcard).
+	mux.HandleFunc("GET /api/game/new", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	})
 	mux.HandleFunc("GET /api/game/{id}", s.handleGetGame)
 	mux.HandleFunc("POST /api/game/{id}/step", s.handleStepGame)
 	mux.HandleFunc("POST /api/game/{id}/save", s.handleSaveSession)

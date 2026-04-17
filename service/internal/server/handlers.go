@@ -90,22 +90,23 @@ func (s *Server) handleStepGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Steps int `json:"steps"`
+		Steps *int `json:"steps"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 		jsonError(w, fmt.Sprintf("invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
-	if req.Steps == 0 {
-		req.Steps = 1
+	steps := 1 // default when field is absent or body is empty
+	if req.Steps != nil {
+		steps = *req.Steps
 	}
-	if req.Steps < 1 || req.Steps > 500 {
+	if steps < 1 || steps > 500 {
 		jsonError(w, "steps must be between 1 and 500", http.StatusBadRequest)
 		return
 	}
 
 	var state game.GameState
-	for i := 0; i < req.Steps; i++ {
+	for i := 0; i < steps; i++ {
 		state = g.Step()
 	}
 	writeJSON(w, http.StatusOK, state)
