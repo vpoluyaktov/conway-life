@@ -282,14 +282,28 @@ func TestStep_EdgeCell_NoWrap(t *testing.T) {
 	}
 }
 
-// 1×5 strip — test that neighbor counting works without panicking on thin boards.
+// 1×5 strip — test neighbor counting on a 1-wide board.
+// Board: width=1 height=5, live cells at (x=0,y=1),(x=0,y=2),(x=0,y=3).
+// Neighbor analysis (Moore, hard edges, no wrap):
+//   (0,1): neighbors = (0,0)=dead, (0,2)=alive → 1 neighbor → dies
+//   (0,2): neighbors = (0,1)=alive, (0,3)=alive → 2 neighbors → survives
+//   (0,3): neighbors = (0,2)=alive, (0,4)=dead → 1 neighbor → dies
+//   (0,0),(0,4): 1 neighbor each → no birth
+// Expected after 1 step: only center cell (0,2) alive.
 func TestStep_ThinBoard_1x5(t *testing.T) {
 	g := makeGame(t, 1, 5, [][2]int{{0, 1}, {0, 2}, {0, 3}})
-	// On a 1-wide board, no cell can have 3 in-bounds neighbors in a column (max 2).
-	// All cells should die after one step.
 	g.Step()
-	if liveCount(g) != 0 {
-		t.Errorf("1x5 strip after step: expected 0 live cells, got %d", liveCount(g))
+	if liveCount(g) != 1 {
+		t.Errorf("1x5 strip after step: expected 1 live cell (center), got %d", liveCount(g))
+	}
+	if cellAt(g, 0, 2) == 0 {
+		t.Errorf("center cell (0,2): expected alive (2 neighbors), got dead")
+	}
+	if cellAt(g, 0, 1) != 0 {
+		t.Errorf("end cell (0,1): expected dead (1 neighbor), got age %d", cellAt(g, 0, 1))
+	}
+	if cellAt(g, 0, 3) != 0 {
+		t.Errorf("end cell (0,3): expected dead (1 neighbor), got age %d", cellAt(g, 0, 3))
 	}
 }
 
