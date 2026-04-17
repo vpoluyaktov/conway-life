@@ -7,7 +7,7 @@ import (
 	"conway-life/internal/config"
 	"conway-life/internal/game"
 	"conway-life/internal/store"
-	"conway-life/internal/templates"
+	"conway-life/templates"
 )
 
 // Server wires together config, persistence, and the in-memory game registry.
