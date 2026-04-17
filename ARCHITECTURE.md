@@ -50,24 +50,24 @@ conway-life/
 │   ├── go.mod                           # module conway-life; go 1.22
 │   ├── go.sum
 │   ├── Dockerfile                       # Multi-stage: golang:1.22-alpine → alpine:latest
-│   └── internal/
-│       ├── config/
-│       │   ├── config.go                # Config struct; Load() reads env vars
-│       │   └── config_test.go           # Defaults + env var override tests
-│       ├── game/
-│       │   ├── game.go                  # Game struct + Step() + Randomize() + NewGame()
-│       │   └── game_test.go             # Rule tests: still life, oscillator, glider, edge cases
-│       ├── server/
-│       │   ├── server.go                # Server struct + New() + SetupRoutes()
-│       │   ├── handlers.go              # All HTTP handlers
-│       │   ├── handlers_test.go         # Table-driven handler tests with MockStore
-│       │   └── middleware.go            # Request logging (optional) + content-type helpers
-│       ├── store/
-│       │   ├── store.go                 # Store interface + FirestoreStore implementation
-│       │   └── store_test.go            # (integration tests — skipped in unit CI)
-│       └── templates/
-│           ├── templates.go             # //go:embed index.html — embed.FS
-│           └── index.html               # Full UI: HTML + inline CSS + inline JS
+│   ├── internal/
+│   │   ├── config/
+│   │   │   ├── config.go                # Config struct; Load() reads env vars
+│   │   │   └── config_test.go           # Defaults + env var override tests
+│   │   ├── game/
+│   │   │   ├── game.go                  # Game struct + Step() + Randomize() + NewGame()
+│   │   │   └── game_test.go             # Rule tests: still life, oscillator, glider, edge cases
+│   │   ├── server/
+│   │   │   ├── server.go                # Server struct + New() + SetupRoutes()
+│   │   │   ├── handlers.go              # All HTTP handlers
+│   │   │   ├── handlers_test.go         # Table-driven handler tests with MockStore
+│   │   │   └── middleware.go            # Request logging (optional) + content-type helpers
+│   │   └── store/
+│   │       ├── store.go                 # Store interface + FirestoreStore implementation
+│   │       └── store_test.go            # (integration tests — skipped in unit CI)
+│   └── templates/
+│       ├── templates.go                 # //go:embed index.html — embed.FS
+│       └── index.html                   # Full UI: HTML + inline CSS + inline JS
 │
 ├── terraform/                           # Shared modules
 │   ├── main.tf                          # Google provider config
@@ -794,7 +794,7 @@ This produces a visibly colorful, dynamic grid — stable still-lifes pulse thro
 ## 11. Embedded Templates
 
 ```go
-// internal/templates/templates.go
+// templates/templates.go
 package templates
 
 import "embed"
@@ -851,7 +851,7 @@ Recommended order — tasks in the same row can run in parallel:
 | Phase | Tasks |
 |-------|-------|
 | 1 | DevOps: create GitHub repo, set secrets, scaffold `.github/workflows/main.yml` with `test` job only. |
-| 2 | Backend: `config`, `game` package (pure logic), `store` interface + `FirestoreStore`, `server` handlers, `main.go`. Frontend: `internal/templates/index.html`. QA: write `game_test.go` and `handlers_test.go` (MockStore) from spec — does NOT wait for backend. |
+| 2 | Backend: `config`, `game` package (pure logic), `store` interface + `FirestoreStore`, `server` handlers, `main.go`. Frontend: `templates/index.html`. QA: write `game_test.go` and `handlers_test.go` (MockStore) from spec — does NOT wait for backend. |
 | 3 | DevOps: fill in Terraform (`cloud-run.tf`, `firestore.tf`, `iam.tf`, `dns.tf`, `apis.tf`, `outputs.tf`, `variables.tf`, `main.tf`, `versions.tf`, stage/prod tfvars). Extend workflow with `build-and-deploy` job + pre-deploy resource check. |
 | 4 | Push `stage` branch; DevOps monitors CI; QA verifies `/health` and runs end-to-end smoke against the deployed URL. |
 | 5 | Fast-forward merge `stage` → `main`; deploy to production; QA verifies. |
