@@ -1,0 +1,20 @@
+# Go build artifacts
+/service/conway-life
+/service/*.out
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+crash.log
+crash.*.log
+# CI generates terraform/backend.tf at runtime by copying from stage/ or prod/.
+/terraform/backend.tf
+
+# OS/editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

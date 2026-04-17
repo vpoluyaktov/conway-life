@@ -1,0 +1,15 @@
+project_id              = "dfh-stage-id"
+service_name            = "conway-life-stage"
+environment             = "staging"
+tfstate_bucket_name     = "dfh-stage-tfstate"
+min_instances           = 0
+max_instances           = 3
+cpu_limit               = "1"
+memory_limit            = "512Mi"
+timeout                 = "30s"
+dns_project_id          = "dfh-ops-id"
+dns_zone_name           = "demo-devops-for-hire-com"
+dns_domain              = "demo.devops-for-hire.com"
+custom_domain           = "conway-life.stage.demo.devops-for-hire.com"
+firestore_database_name = "conway-life"
+firestore_location      = "nam5"
