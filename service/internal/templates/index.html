@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conway's Game of Life</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #0a0a1e, #1a0a2e);
+    color: #c0c0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid #2a2a4a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  header h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #00ff88;
+    text-shadow: 0 0 12px #00ff8866;
+    letter-spacing: 1px;
+  }
+
+  header .meta {
+    font-size: 0.75rem;
+    color: #6060a0;
+  }
+
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── Canvas column ── */
+  .canvas-col {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-width: 0;
+  }
+
+  #game-canvas {
+    border: 1px solid #2a2a4a;
+    cursor: default;
+    display: block;
+    image-rendering: pixelated;
+    box-shadow: 0 0 30px #00ff8820;
+  }
+
+  #game-canvas.edit-mode { cursor: crosshair; }
+
+  /* ── Right sidebar ── */
+  .sidebar {
+    width: 280px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10,10,40,0.6);
+    border-left: 1px solid #2a2a4a;
+    overflow-y: auto;
+  }
+
+  .panel {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1a1a3a;
+  }
+
+  .panel-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #4040a0;
+    margin-bottom: 10px;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid #3a3a6a;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.04);
+    color: #b0b0d0;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: rgba(255,255,255,0.09); border-color: #5555aa; color: #d0d0f0; }
+  .btn:active { background: rgba(255,255,255,0.14); }
+
+  .btn.primary {
+    border-color: #00cc66;
+    color: #00ff88;
+    background: rgba(0,255,136,0.06);
+  }
+  .btn.primary:hover { background: rgba(0,255,136,0.14); border-color: #00ff88; }
+
+  .btn.danger {
+    border-color: #aa3333;
+    color: #ff6666;
+    background: rgba(255,80,80,0.06);
+  }
+  .btn.danger:hover { background: rgba(255,80,80,0.14); }
+
+  .btn.accent {
+    border-color: #0055cc;
+    color: #4499ff;
+    background: rgba(0,128,255,0.06);
+  }
+  .btn.accent:hover { background: rgba(0,128,255,0.14); border-color: #0080ff; }
+
+  .btn.active {
+    border-color: #00ff88;
+    color: #00ff88;
+    background: rgba(0,255,136,0.12);
+    box-shadow: 0 0 8px #00ff8833;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* ── Slider ── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    margin-top: 6px;
+  }
+
+  .slider-row label { color: #6060a0; white-space: nowrap; }
+  .slider-row span { min-width: 48px; color: #00ff88; font-variant-numeric: tabular-nums; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: #2a2a5a;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #00ff88;
+    box-shadow: 0 0 6px #00ff8866;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: none;
+    background: #00ff88;
+  }
+
+  /* ── Stats ── */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat .label { color: #4040a0; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; }
+  .stat .value { color: #d0d0f0; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* ── Board size inputs ── */
+  .board-size-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .board-size-row label { color: #6060a0; }
+  .board-size-row input[type=number] {
+    width: 54px;
+    background: #0d0d28;
+    border: 1px solid #3a3a6a;
+    border-radius: 4px;
+    color: #c0c0e0;
+    padding: 3px 6px;
+    font-size: 0.78rem;
+    outline: none;
+  }
+  .board-size-row input[type=number]:focus { border-color: #5555aa; }
+
+  /* ── Mode toggle ── */
+  .mode-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 0.78rem;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .mode-row .mode-label { color: #4040a0; }
+
+  /* ── Sessions list ── */
+  .sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #2a2a4a;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .session-item:hover { background: rgba(255,255,255,0.06); border-color: #3a3a6a; }
+
+  .session-info { flex: 1; min-width: 0; }
+  .session-name { color: #c0c0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .session-meta { color: #4040a0; font-size: 0.68rem; margin-top: 2px; }
+
+  .session-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .session-actions .btn { padding: 3px 8px; font-size: 0.72rem; }
+
+  .empty-sessions { color: #3a3a6a; font-size: 0.78rem; text-align: center; padding: 12px 0; }
+
+  /* ── Replay controls ── */
+  #replay-panel { display: none; }
+  #replay-panel.visible { display: block; }
+
+  /* ── Status bar ── */
+  #status-bar {
+    padding: 6px 16px;
+    background: rgba(0,0,0,0.5);
+    border-top: 1px solid #1a1a3a;
+    display: flex;
+    gap: 20px;
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+  }
+  #status-bar .sb-item { display: flex; gap: 6px; align-items: center; }
+  #status-bar .sb-label { color: #3a3a6a; }
+  #status-bar .sb-val { color: #8888cc; font-variant-numeric: tabular-nums; }
+  #status-bar #sb-mode { font-weight: 600; color: #00ff88; }
+
+  /* ── Modal / Dialog ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,5,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: #0e0e28;
+    border: 1px solid #3a3a6a;
+    border-radius: 8px;
+    padding: 24px;
+    min-width: 280px;
+    max-width: 90vw;
+    box-shadow: 0 0 40px #00008080;
+  }
+  .modal h2 { font-size: 1rem; color: #c0c0e0; margin-bottom: 16px; }
+  .modal label { display: block; font-size: 0.78rem; color: #6060a0; margin-bottom: 4px; }
+  .modal input[type=text], .modal input[type=number] {
+    width: 100%;
+    background: #080818;
+    border: 1px solid #3a3a6a;
+    border-radius: 4px;
+    color: #c0c0e0;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .modal input:focus { border-color: #5555aa; }
+  .modal .modal-row { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+  .modal .modal-row label { margin: 0; white-space: nowrap; }
+  .modal .modal-row input { margin: 0; flex: 1; }
+  .modal .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  /* ── Notification toast ── */
+  #toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1a1a3a;
+    border: 1px solid #3a3a6a;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    color: #c0c0e0;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 2000;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+    .main-area { flex-direction: column; }
+    .sidebar { width: 100%; min-width: 0; border-left: none; border-top: 1px solid #2a2a4a; }
+    .canvas-col { padding: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Conway's Game of Life</h1>
+  <span class="meta">v{{.Version}} &middot; {{.Environment}}</span>
+</header>
+
+<div class="main-area">
+  <!-- Canvas -->
+  <div class="canvas-col">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <!-- Board setup -->
+    <div class="panel">
+      <div class="panel-title">Board</div>
+      <div class="board-size-row">
+        <label>W</label>
+        <input type="number" id="inp-width" value="40" min="1" max="200">
+        <label>&times; H</label>
+        <input type="number" id="inp-height" value="30" min="1" max="200">
+        <button class="btn primary" id="btn-new-game">New</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btn-random">&#127922; Random</button>
+        <button class="btn" id="btn-clear">&#9003; Clear</button>
+        <button class="btn" id="btn-edit-mode">&#9998; Edit</button>
+      </div>
+    </div>
+
+    <!-- Simulation controls -->
+    <div class="panel">
+      <div class="panel-title">Simulation</div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-start">&#9654; Start</button>
+        <button class="btn" id="btn-step">&#9193; Step</button>
+      </div>
+      <div class="slider-row">
+        <label>Speed</label>
+        <input type="range" id="slider-speed" min="1" max="30" value="5">
+        <span id="lbl-speed">5 gen/s</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="panel">
+      <div class="panel-title">Stats</div>
+      <div class="stats-row">
+        <div class="stat">
+          <span class="label">Generation</span>
+          <span class="value" id="stat-gen">0</span>
+        </div>
+        <div class="stat">
+          <span class="label">Live cells</span>
+          <span class="value" id="stat-live">0</span>
+        </div>
+        <div class="stat">
+          <span class="label">Board</span>
+          <span class="value" id="stat-board">40&times;30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Replay panel (shown only in replay mode) -->
+    <div class="panel" id="replay-panel">
+      <div class="panel-title">Replay</div>
+      <div class="slider-row">
+        <label>Gen</label>
+        <input type="range" id="slider-replay" min="0" max="0" value="0">
+        <span id="lbl-replay-gen">0</span>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn" id="btn-replay-play">&#9654; Play</button>
+        <button class="btn" id="btn-replay-stop">&#9646;&#9646; Pause</button>
+        <button class="btn danger" id="btn-exit-replay">&#10005; Exit</button>
+      </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="panel" style="flex:1">
+      <div class="panel-title">Sessions</div>
+      <div class="btn-row">
+        <button class="btn accent" id="btn-save-session">&#128190; Save Current&hellip;</button>
+        <button class="btn" id="btn-refresh-sessions" title="Refresh list">&#8635;</button>
+      </div>
+      <div class="sessions-list" id="sessions-list">
+        <div class="empty-sessions">No saved sessions</div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <div class="sb-item"><span class="sb-label">Mode:</span><span class="sb-val" id="sb-mode">Setup</span></div>
+  <div class="sb-item"><span class="sb-label">Gen:</span><span class="sb-val" id="sb-gen">0</span></div>
+  <div class="sb-item"><span class="sb-label">Live:</span><span class="sb-val" id="sb-live">0</span></div>
+  <div class="sb-item"><span class="sb-label">Boundary:</span><span class="sb-val">hard edges &mdash; gliders die at edge</span></div>
+</div>
+
+<!-- New Game Modal -->
+<div class="modal-overlay" id="modal-new-game">
+  <div class="modal">
+    <h2>New Game</h2>
+    <label>Width (1–200)</label>
+    <input type="number" id="modal-width" value="40" min="1" max="200">
+    <label>Height (1–200)</label>
+    <input type="number" id="modal-height" value="30" min="1" max="200">
+    <label>Random fill %</label>
+    <input type="number" id="modal-fill" value="0" min="0" max="100" placeholder="0 = empty">
+    <div class="modal-btns">
+      <button class="btn" id="modal-cancel-new">Cancel</button>
+      <button class="btn primary" id="modal-confirm-new">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save Session Modal -->
+<div class="modal-overlay" id="modal-save">
+  <div class="modal">
+    <h2>Save Session</h2>
+    <label>Session Name</label>
+    <input type="text" id="modal-save-name" placeholder="My pattern at gen 42" maxlength="100">
+    <div class="modal-btns">
+      <button class="btn" id="modal-cancel-save">Cancel</button>
+      <button class="btn primary" id="modal-confirm-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════ */
+const state = {
+  gameId: null,
+  width: 40,
+  height: 30,
+  cells: [],          // [][]uint16 — cells[y][x] = age (0=dead)
+  generation: 0,
+  liveCells: 0,
+  mode: 'setup',      // 'setup' | 'simulate' | 'replay'
+  running: false,
+  runInterval: null,
+  speed: 5,           // gen/s
+  editMode: false,
+  mouseDown: false,
+  mouseToggleVal: null, // what value we're painting (0 or 1)
+  replayData: null,   // { generations: [{generation, cells}], name, ... }
+  replayIndex: 0,
+  replayRunning: false,
+  replayInterval: null,
+};
+
+/* ════════════════════════════════════════════════════
+   DOM REFS
+════════════════════════════════════════════════════ */
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+const btnNewGame     = document.getElementById('btn-new-game');
+const btnRandom      = document.getElementById('btn-random');
+const btnClear       = document.getElementById('btn-clear');
+const btnEditMode    = document.getElementById('btn-edit-mode');
+const btnStart       = document.getElementById('btn-start');
+const btnStep        = document.getElementById('btn-step');
+const sliderSpeed    = document.getElementById('slider-speed');
+const lblSpeed       = document.getElementById('lbl-speed');
+const statGen        = document.getElementById('stat-gen');
+const statLive       = document.getElementById('stat-live');
+const statBoard      = document.getElementById('stat-board');
+const inpWidth       = document.getElementById('inp-width');
+const inpHeight      = document.getElementById('inp-height');
+const sessionsList   = document.getElementById('sessions-list');
+const btnSave        = document.getElementById('btn-save-session');
+const btnRefresh     = document.getElementById('btn-refresh-sessions');
+const replayPanel    = document.getElementById('replay-panel');
+const sliderReplay   = document.getElementById('slider-replay');
+const lblReplayGen   = document.getElementById('lbl-replay-gen');
+const btnReplayPlay  = document.getElementById('btn-replay-play');
+const btnReplayStop  = document.getElementById('btn-replay-stop');
+const btnExitReplay  = document.getElementById('btn-exit-replay');
+const sbMode         = document.getElementById('sb-mode');
+const sbGen          = document.getElementById('sb-gen');
+const sbLive         = document.getElementById('sb-live');
+const toast          = document.getElementById('toast');
+
+/* ════════════════════════════════════════════════════
+   UTILITY
+════════════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg, ms = 2500) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+}
+
+function makeCells(w, h) {
+  return Array.from({length: h}, () => new Array(w).fill(0));
+}
+
+function countLive(cells) {
+  let n = 0;
+  for (const row of cells) for (const v of row) if (v > 0) n++;
+  return n;
+}
+
+function liveCoordsFromCells(cells) {
+  const coords = [];
+  for (let y = 0; y < cells.length; y++)
+    for (let x = 0; x < cells[y].length; x++)
+      if (cells[y][x] > 0) coords.push([x, y]);
+  return coords;
+}
+
+/* ════════════════════════════════════════════════════
+   RENDERING
+════════════════════════════════════════════════════ */
+function cellPx(w, h) {
+  return Math.max(4, Math.min(24, Math.floor(720 / Math.max(w, h))));
+}
+
+function cellColor(age) {
+  if (age <= 0) return '#151530';
+  const hue   = (age * 6) % 360;
+  const sat   = 85;
+  const light = 50 + Math.min(age, 20);
+  return `hsl(${hue} ${sat}% ${light}%)`;
+}
+
+function render() {
+  const { cells, width, height } = state;
+  const px = cellPx(width, height);
+  const cw = width * px;
+  const ch = height * px;
+
+  if (canvas.width !== cw || canvas.height !== ch) {
+    canvas.width  = cw;
+    canvas.height = ch;
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const age = cells[y] ? cells[y][x] : 0;
+      ctx.fillStyle = cellColor(age);
+      ctx.fillRect(x * px, y * px, px, px);
+    }
+  }
+
+  // Grid lines (subtle, only if cells are large enough)
+  if (px >= 6) {
+    ctx.strokeStyle = '#0a0a1e';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let x = 0; x <= width; x++) { ctx.moveTo(x * px, 0); ctx.lineTo(x * px, ch); }
+    for (let y = 0; y <= height; y++) { ctx.moveTo(0, y * px); ctx.lineTo(cw, y * px); }
+    ctx.stroke();
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   UPDATE UI
+════════════════════════════════════════════════════ */
+function updateStats() {
+  const gen  = state.generation;
+  const live = countLive(state.cells);
+  state.liveCells = live;
+  statGen.textContent  = gen;
+  statLive.textContent = live;
+  statBoard.textContent = `${state.width}\u00d7${state.height}`;
+  sbGen.textContent    = gen;
+  sbLive.textContent   = live;
+
+  const modeLabels = { setup: 'Setup', simulate: 'Simulating', replay: 'Replay' };
+  let modeStr = modeLabels[state.mode] || state.mode;
+  if (state.mode === 'simulate' && state.running) modeStr = 'Running';
+  else if (state.mode === 'simulate' && !state.running) modeStr = 'Paused';
+  sbMode.textContent = modeStr;
+
+  btnStart.textContent = state.running ? '⏸ Stop' : '▶ Start';
+  btnStart.className = state.running ? 'btn active' : 'btn primary';
+  btnEditMode.className = state.editMode ? 'btn active' : 'btn';
+
+  // Show/hide replay panel
+  if (state.mode === 'replay') {
+    replayPanel.classList.add('visible');
+  } else {
+    replayPanel.classList.remove('visible');
+  }
+}
+
+function applyGameResponse(data) {
+  state.gameId     = data.id;
+  state.width      = data.width;
+  state.height     = data.height;
+  state.generation = data.generation;
+  state.cells      = data.cells;
+  inpWidth.value   = data.width;
+  inpHeight.value  = data.height;
+  updateStats();
+  render();
+}
+
+/* ════════════════════════════════════════════════════
+   API CALLS
+════════════════════════════════════════════════════ */
+async function apiNewGame(width, height, cells) {
+  const body = { width, height };
+  if (cells && cells.length > 0) body.cells = cells;
+  const r = await fetch('/api/game/new', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  return r.json();
+}
+
+async function apiStep(id, steps = 1) {
+  const r = await fetch(`/api/game/${id}/step`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({steps}),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  return r.json();
+}
+
+async function apiSaveSession(id, name) {
+  const r = await fetch(`/api/game/${id}/save`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name}),
+  });
+  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  return r.json();
+}
+
+async function apiListSessions() {
+  const r = await fetch('/api/sessions');
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+
+async function apiLoadSession(id) {
+  const r = await fetch(`/api/sessions/${id}`);
+  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  return r.json();
+}
+
+async function apiDeleteSession(id) {
+  const r = await fetch(`/api/sessions/${id}`, {method: 'DELETE'});
+  if (!r.ok && r.status !== 204) throw new Error(r.statusText);
+}
+
+/* ════════════════════════════════════════════════════
+   GAME ACTIONS
+════════════════════════════════════════════════════ */
+async function newGame(width, height, liveCells) {
+  stopSimulation();
+  state.mode = 'setup';
+  state.editMode = false;
+  canvas.classList.remove('edit-mode');
+  try {
+    const data = await apiNewGame(width, height, liveCells || []);
+    applyGameResponse(data);
+  } catch(e) {
+    showToast('Error: ' + e.message, 4000);
+  }
+}
+
+async function stepOnce() {
+  if (!state.gameId) { showToast('Create a game first'); return; }
+  if (state.mode === 'replay') return;
+  if (state.mode === 'setup') state.mode = 'simulate';
+  try {
+    const data = await apiStep(state.gameId, 1);
+    applyGameResponse(data);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+function startSimulation() {
+  if (!state.gameId) { showToast('Create a game first'); return; }
+  if (state.mode === 'replay') return;
+  if (state.mode === 'setup') state.mode = 'simulate';
+  state.running = true;
+  scheduleRun();
+  updateStats();
+}
+
+function stopSimulation() {
+  state.running = false;
+  clearInterval(state.runInterval);
+  state.runInterval = null;
+  updateStats();
+}
+
+function scheduleRun() {
+  clearInterval(state.runInterval);
+  if (!state.running) return;
+  state.runInterval = setInterval(async () => {
+    if (!state.running || !state.gameId) return;
+    try {
+      const data = await apiStep(state.gameId, 1);
+      applyGameResponse(data);
+    } catch(e) {
+      stopSimulation();
+      showToast('Simulation error: ' + e.message);
+    }
+  }, Math.round(1000 / state.speed));
+}
+
+async function clearBoard() {
+  stopSimulation();
+  state.mode = 'setup';
+  state.editMode = false;
+  canvas.classList.remove('edit-mode');
+  await newGame(state.width, state.height, []);
+}
+
+async function randomBoard() {
+  stopSimulation();
+  const w = parseInt(inpWidth.value) || 40;
+  const h = parseInt(inpHeight.value) || 30;
+  const coords = [];
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (Math.random() < 0.25) coords.push([x, y]);
+  await newGame(w, h, coords);
+}
+
+/* ════════════════════════════════════════════════════
+   CANVAS INTERACTION (edit mode)
+════════════════════════════════════════════════════ */
+function canvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const px = cellPx(state.width, state.height);
+  const touch = e.touches ? e.touches[0] : e;
+  const cx = Math.floor((touch.clientX - rect.left) / px);
+  const cy = Math.floor((touch.clientY - rect.top) / px);
+  return [cx, cy];
+}
+
+function toggleCell(x, y, val) {
+  if (x < 0 || x >= state.width || y < 0 || y >= state.height) return;
+  if (!state.cells[y]) return;
+  state.cells[y][x] = val;
+  updateStats();
+  render();
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (!state.editMode || state.mode !== 'setup') return;
+  state.mouseDown = true;
+  const [x, y] = canvasCoords(e);
+  if (x < 0 || x >= state.width || y < 0 || y >= state.height) return;
+  state.mouseToggleVal = state.cells[y][x] > 0 ? 0 : 1;
+  toggleCell(x, y, state.mouseToggleVal);
+  e.preventDefault();
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!state.mouseDown || !state.editMode) return;
+  const [x, y] = canvasCoords(e);
+  toggleCell(x, y, state.mouseToggleVal);
+  e.preventDefault();
+});
+
+window.addEventListener('mouseup', () => { state.mouseDown = false; });
+
+canvas.addEventListener('touchstart', e => {
+  if (!state.editMode || state.mode !== 'setup') return;
+  state.mouseDown = true;
+  const [x, y] = canvasCoords(e);
+  if (x < 0 || x >= state.width || y < 0 || y >= state.height) return;
+  state.mouseToggleVal = state.cells[y][x] > 0 ? 0 : 1;
+  toggleCell(x, y, state.mouseToggleVal);
+  e.preventDefault();
+}, {passive: false});
+
+canvas.addEventListener('touchmove', e => {
+  if (!state.mouseDown || !state.editMode) return;
+  const [x, y] = canvasCoords(e);
+  toggleCell(x, y, state.mouseToggleVal);
+  e.preventDefault();
+}, {passive: false});
+
+window.addEventListener('touchend', () => { state.mouseDown = false; });
+
+/* ════════════════════════════════════════════════════
+   SESSIONS
+════════════════════════════════════════════════════ */
+async function refreshSessions() {
+  try {
+    const data = await apiListSessions();
+    renderSessionsList(data.sessions || []);
+  } catch(e) {
+    sessionsList.innerHTML = '<div class="empty-sessions">Error loading sessions</div>';
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+  } catch { return iso; }
+}
+
+function renderSessionsList(sessions) {
+  if (!sessions || sessions.length === 0) {
+    sessionsList.innerHTML = '<div class="empty-sessions">No saved sessions</div>';
+    return;
+  }
+  sessionsList.innerHTML = '';
+  for (const s of sessions) {
+    const item = document.createElement('div');
+    item.className = 'session-item';
+    item.innerHTML = `
+      <div class="session-info">
+        <div class="session-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
+        <div class="session-meta">${s.width}&times;${s.height} &middot; ${s.generation_count} gens &middot; ${formatDate(s.created_at)}</div>
+      </div>
+      <div class="session-actions">
+        <button class="btn accent" data-id="${s.id}" data-action="load">Load</button>
+        <button class="btn danger" data-id="${s.id}" data-action="del">&#128465;</button>
+      </div>`;
+    sessionsList.appendChild(item);
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+sessionsList.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if (action === 'load') {
+    await loadSession(id);
+  } else if (action === 'del') {
+    await deleteSession(id);
+  }
+});
+
+async function loadSession(id) {
+  try {
+    const data = await apiLoadSession(id);
+    stopSimulation();
+    stopReplay();
+    state.replayData  = data;
+    state.replayIndex = 0;
+    state.mode        = 'replay';
+    sliderReplay.min  = 0;
+    sliderReplay.max  = (data.generations || []).length - 1;
+    sliderReplay.value = 0;
+    showReplayFrame(0);
+    showToast(`Loaded: ${data.name}`);
+  } catch(e) {
+    showToast('Error loading session: ' + e.message, 4000);
+  }
+}
+
+function showReplayFrame(idx) {
+  if (!state.replayData || !state.replayData.generations) return;
+  const gens = state.replayData.generations;
+  if (idx < 0 || idx >= gens.length) return;
+  state.replayIndex = idx;
+  const frame = gens[idx];
+  state.cells = frame.cells;
+  state.generation = frame.generation;
+  state.width  = state.replayData.width;
+  state.height = state.replayData.height;
+  sliderReplay.value = idx;
+  lblReplayGen.textContent = frame.generation;
+  updateStats();
+  render();
+}
+
+function stopReplay() {
+  state.replayRunning = false;
+  clearInterval(state.replayInterval);
+  state.replayInterval = null;
+}
+
+function startReplay() {
+  if (!state.replayData) return;
+  state.replayRunning = true;
+  state.replayInterval = setInterval(() => {
+    const next = state.replayIndex + 1;
+    if (next >= (state.replayData.generations || []).length) {
+      stopReplay();
+      return;
+    }
+    showReplayFrame(next);
+  }, Math.round(1000 / state.speed));
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  try {
+    await apiDeleteSession(id);
+    showToast('Session deleted');
+    await refreshSessions();
+  } catch(e) {
+    showToast('Error deleting: ' + e.message, 4000);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   EVENT HANDLERS
+════════════════════════════════════════════════════ */
+btnNewGame.addEventListener('click', () => {
+  const w = parseInt(inpWidth.value) || 40;
+  const h = parseInt(inpHeight.value) || 30;
+  document.getElementById('modal-width').value  = w;
+  document.getElementById('modal-height').value = h;
+  document.getElementById('modal-fill').value   = 0;
+  document.getElementById('modal-new-game').classList.add('visible');
+});
+
+document.getElementById('modal-cancel-new').addEventListener('click', () => {
+  document.getElementById('modal-new-game').classList.remove('visible');
+});
+
+document.getElementById('modal-confirm-new').addEventListener('click', async () => {
+  document.getElementById('modal-new-game').classList.remove('visible');
+  const w    = Math.min(200, Math.max(1, parseInt(document.getElementById('modal-width').value) || 40));
+  const h    = Math.min(200, Math.max(1, parseInt(document.getElementById('modal-height').value) || 30));
+  const fill = Math.min(100, Math.max(0, parseInt(document.getElementById('modal-fill').value) || 0));
+  inpWidth.value  = w;
+  inpHeight.value = h;
+  const coords = [];
+  if (fill > 0) {
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (Math.random() * 100 < fill) coords.push([x, y]);
+  }
+  await newGame(w, h, coords);
+});
+
+btnRandom.addEventListener('click', randomBoard);
+btnClear.addEventListener('click', clearBoard);
+
+btnEditMode.addEventListener('click', () => {
+  if (state.mode === 'replay') return;
+  if (state.mode !== 'setup') {
+    stopSimulation();
+    state.mode = 'setup';
+  }
+  state.editMode = !state.editMode;
+  canvas.classList.toggle('edit-mode', state.editMode);
+  updateStats();
+});
+
+btnStart.addEventListener('click', () => {
+  if (state.mode === 'replay') return;
+  if (state.running) {
+    stopSimulation();
+  } else {
+    state.editMode = false;
+    canvas.classList.remove('edit-mode');
+    startSimulation();
+  }
+});
+
+btnStep.addEventListener('click', async () => {
+  if (state.mode === 'replay') return;
+  state.editMode = false;
+  canvas.classList.remove('edit-mode');
+  await stepOnce();
+});
+
+sliderSpeed.addEventListener('input', () => {
+  state.speed = parseInt(sliderSpeed.value);
+  lblSpeed.textContent = `${state.speed} gen/s`;
+  if (state.running) scheduleRun();
+  if (state.replayRunning) { stopReplay(); startReplay(); }
+});
+
+btnSave.addEventListener('click', () => {
+  if (!state.gameId || state.mode === 'replay') {
+    showToast('No active game to save');
+    return;
+  }
+  const defaultName = `Game @ gen ${state.generation}`;
+  document.getElementById('modal-save-name').value = defaultName;
+  document.getElementById('modal-save').classList.add('visible');
+  document.getElementById('modal-save-name').select();
+});
+
+document.getElementById('modal-cancel-save').addEventListener('click', () => {
+  document.getElementById('modal-save').classList.remove('visible');
+});
+
+document.getElementById('modal-confirm-save').addEventListener('click', async () => {
+  const name = document.getElementById('modal-save-name').value.trim() || `Game @ gen ${state.generation}`;
+  document.getElementById('modal-save').classList.remove('visible');
+  try {
+    await apiSaveSession(state.gameId, name);
+    showToast('Session saved!');
+    await refreshSessions();
+  } catch(e) {
+    showToast('Save error: ' + e.message, 4000);
+  }
+});
+
+btnRefresh.addEventListener('click', refreshSessions);
+
+sliderReplay.addEventListener('input', () => {
+  showReplayFrame(parseInt(sliderReplay.value));
+});
+
+btnReplayPlay.addEventListener('click', () => {
+  stopReplay();
+  startReplay();
+});
+btnReplayStop.addEventListener('click', stopReplay);
+btnExitReplay.addEventListener('click', () => {
+  stopReplay();
+  state.mode = 'setup';
+  state.replayData = null;
+  replayPanel.classList.remove('visible');
+  updateStats();
+});
+
+// Close modals on overlay click
+document.getElementById('modal-new-game').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
+document.getElementById('modal-save').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (state.mode === 'replay') return;
+    if (state.running) stopSimulation(); else startSimulation();
+  } else if (e.code === 'ArrowRight' && !e.shiftKey) {
+    if (state.mode === 'replay') {
+      showReplayFrame(state.replayIndex + 1);
+    } else {
+      stepOnce();
+    }
+  } else if (e.code === 'ArrowLeft' && state.mode === 'replay') {
+    showReplayFrame(state.replayIndex - 1);
+  } else if (e.code === 'KeyE') {
+    btnEditMode.click();
+  }
+});
+
+/* ════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════ */
+async function init() {
+  state.speed = parseInt(sliderSpeed.value);
+  lblSpeed.textContent = `${state.speed} gen/s`;
+
+  // Initialize with a default board
+  state.width  = 40;
+  state.height = 30;
+  state.cells  = makeCells(state.width, state.height);
+  render();
+  updateStats();
+
+  // Create initial game on backend
+  try {
+    const data = await apiNewGame(state.width, state.height, []);
+    applyGameResponse(data);
+  } catch(e) {
+    // Backend may not be available yet; still show empty grid
+    console.warn('Init game failed:', e.message);
+  }
+
+  await refreshSessions();
+}
+
+init();
+</script>
+</body>
+</html>
