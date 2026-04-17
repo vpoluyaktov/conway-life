@@ -24,7 +24,10 @@ type SessionMeta struct {
 	Width           int       `json:"width"            firestore:"width"`
 	Height          int       `json:"height"           firestore:"height"`
 	GenerationCount int       `json:"generation_count" firestore:"generation_count"`
-	CreatedAt       time.Time `json:"created_at"       firestore:"created_at,serverTimestamp"`
+	// Write the client-provided time.Now().UTC() directly so the field is a real
+	// Firestore Timestamp. The serverTimestamp tag can leave the field null/missing,
+	// which causes OrderBy("created_at") in ListSessions to silently exclude documents.
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
 }
 
 // GenerationSnapshot stores one generation's board for Firestore.
