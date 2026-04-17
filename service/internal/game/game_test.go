@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"math"
 	"testing"
 
 	"conway-life/internal/game"
@@ -416,22 +417,24 @@ func TestStep_Full3x3Board(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestStep_AgeCapAtUint16Max(t *testing.T) {
-	// Use the 2x2 block (stable) to accumulate age without dying.
-	// Manually set an age near the cap and verify it doesn't overflow.
-	// We test this via the game's exported Cells field after construction.
+	// 2x2 block — each cell has 3 live neighbors, so all survive every step.
+	// Directly mutate Cells to an age near the uint16 cap and verify the
+	// step algorithm clamps to math.MaxUint16 rather than overflowing to 0.
 	g := makeGame(t, 4, 4, [][2]int{{1, 1}, {2, 1}, {1, 2}, {2, 2}})
-	// Advance to age 65534 by mutating directly (the block stays alive).
-	// Since we can't set cells directly, we verify the cap rule in principle:
-	// after any step, no cell's age exceeds 65535.
-	for i := 0; i < 10; i++ {
-		g.Step()
-		for y := range g.Cells {
-			for x, v := range g.Cells[y] {
-				if v > 65535 {
-					t.Errorf("step %d, cell (%d,%d): age %d exceeds uint16 max", i, x, y, v)
-				}
-			}
-		}
+
+	// Set one block cell to MaxUint16-1; the others stay at 1.
+	g.Cells[1][1] = math.MaxUint16 - 1
+
+	// Step 1: cell at MaxUint16-1 should advance to MaxUint16.
+	g.Step()
+	if g.Cells[1][1] != math.MaxUint16 {
+		t.Errorf("age after step from MaxUint16-1: got %d, want %d (MaxUint16)", g.Cells[1][1], uint16(math.MaxUint16))
+	}
+
+	// Step 2: cell at MaxUint16 must stay capped — not overflow to 0.
+	g.Step()
+	if g.Cells[1][1] != math.MaxUint16 {
+		t.Errorf("age after step from MaxUint16: got %d, want %d (capped, no overflow)", g.Cells[1][1], uint16(math.MaxUint16))
 	}
 }
 
